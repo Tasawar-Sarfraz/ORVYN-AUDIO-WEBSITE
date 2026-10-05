@@ -1,0 +1,22 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { filterProducts } from '@/lib/catalog';
+import { getProduct } from '@/data/catalog';
+import { ProductCard } from '@/components/product-card';
+import { useStore } from '@/components/store-provider';
+
+export function CatalogBrowser({ collection }: { collection?: 'focus' | 'move' | 'unwind' }) {
+  const params = useSearchParams(); const router = useRouter(); const pathname = usePathname();
+  const { compare } = useStore();
+  const query = params.get('q') ?? ''; const category = params.get('category') ?? ''; const finish = params.get('finish') ?? ''; const availability = params.get('availability') ?? ''; const sort = params.get('sort') ?? 'featured';
+  const [visibleCount, setVisibleCount] = useState(8);
+  const products = useMemo(() => filterProducts({ query, category, finish, availability, sort, collection }), [availability, category, collection, finish, query, sort]);
+  const visible = products.slice(0, visibleCount);
+  useEffect(() => { setVisibleCount(8); }, [query, category, finish, availability, sort, collection]);
+  const update = (key: string, value: string) => { const next = new URLSearchParams(params.toString()); if (value) next.set(key, value); else next.delete(key); router.replace(`${pathname}?${next.toString()}`, { scroll: false }); };
+  const clear = () => router.replace(pathname, { scroll: false });
+  const comparedProducts = compare.flatMap((id) => { const product = getProduct(id); return product ? [product] : []; });
+  return <><div className="toolbar"><div className="search-wrap"><span>⌕</span><input className="input" value={query} onChange={(event) => update('q', event.target.value)} placeholder="Search the issue" aria-label="Search products" /></div><div className="filters"><select className="select" value={category} onChange={(event) => update('category', event.target.value)} aria-label="Filter by category"><option value="">All categories</option><option>Audio</option><option>Desk tech</option><option>Everyday carry</option></select><select className="select" value={finish} onChange={(event) => update('finish', event.target.value)} aria-label="Filter by finish"><option value="">All finishes</option><option>Ink</option><option>Stone</option><option>Signal</option><option>Oxide</option><option>Mist</option></select><select className="select" value={availability} onChange={(event) => update('availability', event.target.value)} aria-label="Filter by availability"><option value="">Any stock</option><option value="in-stock">In stock</option><option value="sold-out">Unavailable</option></select><select className="select" value={sort} onChange={(event) => update('sort', event.target.value)} aria-label="Sort products"><option value="featured">Featured</option><option value="price-asc">Price / low</option><option value="price-desc">Price / high</option><option value="name">Name</option></select></div></div>{comparedProducts.length > 0 && <div className="compare-bar" role="status"><span><strong>Compare / {comparedProducts.length} of 3</strong> — {comparedProducts.map((product) => product.name).join(' · ')}</span><a className="btn btn-primary" href="/compare">View comparison</a></div>}<div className="chips"><span className="mono muted">{products.length} products</span>{query && <button className="chip" onClick={() => update('q', '')}>Search: {query} ×</button>}{category && <button className="chip" onClick={() => update('category', '')}>{category} ×</button>}{finish && <button className="chip" onClick={() => update('finish', '')}>{finish} ×</button>}{availability && <button className="chip" onClick={() => update('availability', '')}>{availability} ×</button>}{(query || category || finish || availability || sort !== 'featured') && <button className="chip" onClick={clear}>Clear all</button>}</div>{visible.length ? <div className="product-grid shop-grid">{visible.map((product) => <ProductCard product={product} key={product.id} />)}</div> : <div className="empty"><h2>No exact match.</h2><p>Try a wider term or clear the issue filters.</p><button className="btn btn-dark" onClick={clear}>Clear filters</button></div>}{visible.length < products.length && <div className="pagination"><button className="btn btn-quiet" onClick={() => setVisibleCount((count) => count + 8)}>Load next 8</button></div>}</>;
+}

@@ -1,0 +1,16 @@
+'use client';
+
+import Link from 'next/link';
+import { useMemo } from 'react';
+import { useStore } from '@/components/store-provider';
+import { getProduct, getVariant } from '@/data/catalog';
+import { formatPKR } from '@/data/store-config';
+import { calculateTotals } from '@/lib/totals';
+import { ProductMedia } from '@/components/product-media';
+
+export function CartClient() {
+  const { cart, updateQuantity, removeFromCart, clearCart, hydrated } = useStore(); const lines = useMemo(() => cart.flatMap((line) => { const product = getProduct(line.productId); const variant = product && getVariant(product, line.variantId); return product && variant ? [{ line, product, variant }] : []; }), [cart]); const totals = calculateTotals(cart);
+  if (!hydrated) return <div className="empty">Loading your bag…</div>;
+  if (!lines.length) return <div className="empty"><span className="eyebrow">Bag / 00 items</span><h2>Your bag is quiet.</h2><p>Start with a considered object from the current issue.</p><Link className="btn btn-primary" href="/shop">Shop the edit</Link></div>;
+  return <div className="utility-grid"><div className="panel"><div className="section-head" style={{ marginBottom: 0 }}><span className="mono">{cart.reduce((sum, line) => sum + line.quantity, 0)} items</span><button className="chip" onClick={clearCart}>Clear bag</button></div>{lines.map(({ line, product, variant }) => <div className="line-item" key={`${line.productId}-${line.variantId}`}><div className="product-card-media"><ProductMedia product={product} variantId={variant.id} compact /></div><div><span className="eyebrow muted">{product.category}</span><h3 style={{ margin: '4px 0' }}>{product.name}</h3><p className="muted" style={{ margin: 0 }}>{variant.finish} · {formatPKR(variant.price)} each</p><div className="buy-row" style={{ marginTop: 10 }}><div className="qty"><button onClick={() => updateQuantity(product.id, variant.id, line.quantity - 1)} aria-label="Decrease quantity">−</button><input value={line.quantity} readOnly aria-label={`Quantity for ${product.name}`} /><button onClick={() => updateQuantity(product.id, variant.id, line.quantity + 1)} aria-label="Increase quantity">+</button></div><button className="chip" onClick={() => removeFromCart(product.id, variant.id)}>Remove</button></div></div><strong>{formatPKR(variant.price * line.quantity)}</strong></div>)}</div><div className="summary"><span className="eyebrow">Bag summary / Sample store</span><div className="summary-row"><span>Merchandise</span><strong>{formatPKR(totals.merchandiseSubtotal)}</strong></div><div className="summary-row"><span>Coupon</span><strong>{totals.discount ? `− ${formatPKR(totals.discount)}` : '—'}</strong></div><div className="summary-row"><span>Delivery</span><strong>{totals.freeDelivery ? 'Free' : formatPKR(totals.delivery)}</strong></div><div className="summary-row summary-total"><span>Total</span><strong>{formatPKR(totals.total)}</strong></div><p className="mono" style={{ color: '#a9b0b2' }}>Coupon ORVYN10 is available at demo checkout. {totals.freeDelivery ? 'This bag qualifies for free sample delivery.' : 'Free sample delivery from PKR 20,000 after discount.'}</p><Link className="btn btn-primary" href="/checkout" style={{ width: '100%' }}>Continue to demo checkout</Link></div></div>;
+}

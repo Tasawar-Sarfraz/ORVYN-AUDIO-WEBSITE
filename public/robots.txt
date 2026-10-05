@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+# Production host is intentionally configurable for this frontend concept.
